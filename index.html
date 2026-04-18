@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Alpha Desk</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg:      #070b14;
+      --bg2:     #0d1424;
+      --bg3:     #111827;
+      --border:  rgba(167,139,250,.15);
+      --purple:  #a78bfa;
+      --green:   #00e5a0;
+      --red:     #ff4d6d;
+      --yellow:  #fbbf24;
+      --text:    #e2e8f0;
+      --muted:   #64748b;
+      --mono:    'Courier New', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* ── Grid background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(167,139,250,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(167,139,250,.04) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(7,11,20,.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px 10px;
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .logo { display: flex; align-items: center; gap: 8px; }
+    .logo-icon { font-size: 18px; color: var(--purple); }
+    .logo-text { font-size: 17px; font-weight: 900; letter-spacing: 3px; font-family: var(--mono); }
+    .live-dot { display: inline-block; width: 7px; height: 7px; background: var(--green); border-radius: 50%; margin-left: 6px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .refresh-btn {
+      background: rgba(167,139,250,.1);
+      border: 1px solid rgba(167,139,250,.3);
+      color: var(--purple);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .update-time { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+
+    /* ── Setup screen ── */
+    #setup-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .setup-icon { font-size: 48px; margin-bottom: 16px; }
+    .setup-title { font-size: 22px; font-weight: 900; color: var(--purple); margin-bottom: 8px; font-family: var(--mono); letter-spacing: 2px; }
+    .setup-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; text-align: center; line-height: 1.6; }
+    .setup-input {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: var(--mono);
+      margin-bottom: 12px;
+      outline: none;
+    }
+    .setup-btn {
+      width: 100%;
+      background: var(--purple);
+      border: none;
+      border-radius: 12px;
+      padding: 16px;
+      color: var(--bg);
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      margin-top: 8px;
+      letter-spacing: 1px;
+    }
+
+    /* ── KPI strip ── */
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1px;
+      background: rgba(167,139,250,.06);
+      border-bottom: 1px solid var(--border);
+    }
+    .kpi {
+      background: var(--bg2);
+      padding: 12px 14px;
+    }
+    .kpi:first-child { background: rgba(167,139,250,.06); }
+    .kpi-label { font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+    .kpi-value { font-size: 16px; font-weight: 800; font-family: var(--mono); line-height: 1; }
+    .kpi-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Tab bar ── */
+    .tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: rgba(7,11,20,.8);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex: 0 0 auto;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      padding: 10px 16px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .tab-btn.active { color: var(--purple); border-bottom-color: var(--purple); }
+
+    /* ── Content ── */
+    .content { padding: 16px; position: relative; z-index: 1; }
+    .section-title { font-size: 13px; font-weight: 700; color: var(--purple); letter-spacing: .5px; margin-bottom: 12px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .ticker { font-size: 22px; font-weight: 900; font-family: var(--mono); letter-spacing: 1px; }
+    .card-name { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .card-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+
+    .badge {
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .5px;
+    }
+    .badge-long  { color: var(--green); background: rgba(0,229,160,.12); }
+    .badge-short { color: var(--red);   background: rgba(255,77,109,.12); }
+    .badge-win   { color: var(--green); background: rgba(0,229,160,.12); }
+    .badge-loss  { color: var(--red);   background: rgba(255,77,109,.12); }
+    .badge-open  { color: var(--yellow);background: rgba(251,191,36,.12); }
+    .badge-filled{ color: var(--green); background: rgba(0,229,160,.12); }
+    .badge-canceled{color:var(--muted); background: rgba(100,116,139,.12);}
+
+    /* ── Price grid ── */
+    .price-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+    .price-box { background: var(--bg); border-radius: 8px; padding: 7px 8px; text-align: center; }
+    .price-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+    .price-val { font-size: 13px; font-weight: 700; font-family: var(--mono); }
+
+    /* ── PnL row ── */
+    .pnl-row { display: flex; align-items: center; gap: 10px; background: var(--bg); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; }
+    .pnl-main { font-size: 18px; font-weight: 800; font-family: var(--mono); }
+    .pnl-pct  { font-size: 12px; }
+    .pnl-time { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+    /* ── Suggestion ── */
+    .suggestion { display: flex; justify-content: space-between; background: rgba(167,139,250,.05); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; }
+
+    /* ── Buttons ── */
+    .btn-close {
+      width: 100%;
+      background: rgba(255,77,109,.1);
+      border: 1px solid rgba(255,77,109,.4);
+      color: var(--red);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-buy  { background: rgba(0,229,160,.15); border: 1px solid var(--green); color: var(--green); border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; width: 100%; }
+    .btn-sell { background: rgba(255,77,109,.15); border: 1px solid var(--red);   color: var(--red);   border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; width: 100%; }
+
+    /* ── Order form ── */
+    .form-group { margin-bottom: 14px; }
+    .form-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; display: block; }
+    .form-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 15px;
+      font-family: var(--mono);
+      outline: none;
+    }
+    .toggle-row { display: flex; background: var(--bg); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+    .toggle-opt { flex: 1; background: none; border: none; color: var(--muted); padding: 11px 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .toggle-opt.on-buy  { background: rgba(0,229,160,.2);  color: var(--green); }
+    .toggle-opt.on-sell { background: rgba(255,77,109,.2); color: var(--red); }
+    .toggle-opt.on-type { background: rgba(167,139,250,.2);color: var(--purple); }
+
+    .place-btn {
+      width: 100%;
+      border: 2px solid;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 15px;
+      font-weight: 900;
+      font-family: var(--mono);
+      letter-spacing: 1px;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    .place-btn.buy  { background: rgba(0,229,160,.15); border-color: var(--green); color: var(--green); }
+    .place-btn.sell { background: rgba(255,77,109,.15); border-color: var(--red);   color: var(--red); }
+
+    .order-result {
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .order-result.success { border-color: var(--green); color: var(--green); background: rgba(0,229,160,.06); }
+    .order-result.error   { border-color: var(--red);   color: var(--red);   background: rgba(255,77,109,.06); }
+
+    /* ── Risk calculator ── */
+    .risk-row { display: flex; justify-content: space-between; padding: 9px 12px; background: var(--bg); border-radius: 8px; margin-bottom: 6px; }
+    .risk-label { font-size: 13px; color: var(--muted); }
+    .risk-val   { font-size: 13px; font-weight: 700; font-family: var(--mono); }
+
+    /* ── Watchlist ── */
+    .watch-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .watch-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .watch-price { font-size: 20px; font-weight: 800; font-family: var(--mono); }
+    .watch-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+    .watch-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .watch-btn { border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid; }
+
+    /* ── Orders table ── */
+    .orders-list { display: flex; flex-direction: column; gap: 8px; }
+    .order-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px;
+    }
+    .order-symbol { font-size: 16px; font-weight: 800; font-family: var(--mono); }
+    .order-meta   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .order-price  { font-size: 15px; font-weight: 700; font-family: var(--mono); text-align: right; }
+    .order-time   { font-size: 11px; color: var(--muted); text-align: right; margin-top: 2px; }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 50px 20px; color: var(--muted); }
+    .empty-icon { font-size: 40px; margin-bottom: 10px; }
+
+    /* ── Error bar ── */
+    .error-bar { background: rgba(255,77,109,.1); border-bottom: 1px solid rgba(255,77,109,.3); color: var(--red); padding: 10px 16px; font-size: 12px; }
+
+    /* ── Bottom nav (iPhone) ── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(7,11,20,.97);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding-bottom: env(safe-area-inset-bottom);
+      z-index: 100;
+    }
+    .nav-btn { flex: 1; background: none; border: none; color: var(--muted); padding: 10px 4px 8px; font-size: 10px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .nav-btn.active { color: var(--purple); }
+    .nav-icon { font-size: 20px; }
+
+    .hidden { display: none !important; }
+    .green  { color: var(--green); }
+    .red    { color: var(--red); }
+    .yellow { color: var(--yellow); }
+    .purple { color: var(--purple); }
+  </style>
+</head>
+<body>
+
+<!-- ── Setup Screen ── -->
+<div id="setup-screen">
+  <div class="setup-icon">◈</div>
+  <div class="setup-title">ALPHA DESK</div>
+  <div class="setup-sub">Vul je Alpaca Paper Trading<br>API keys in om te verbinden</div>
+  <input class="setup-input" id="inp-key" placeholder="API Key ID (begint met PK...)" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+  <input class="setup-input" id="inp-secret" type="password" placeholder="Secret Key" autocomplete="off">
+  <button class="setup-btn" onclick="connect()">◈ Verbinden met Alpaca</button>
+</div>
+
+<!-- ── Main App ── -->
+<div id="app" class="hidden">
+
+  <header>
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon">◈</div>
+        <div class="logo-text">ALPHA DESK <span class="live-dot"></span></div>
+      </div>
+      <button class="refresh-btn" onclick="fetchAll()">↻ Refresh</button>
+    </div>
+    <div class="update-time" id="update-time">Verbinden...</div>
+  </header>
+
+  <div id="error-bar" class="error-bar hidden"></div>
+
+  <!-- KPI Strip -->
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-label">Portfolio</div>
+      <div class="kpi-value" id="kpi-equity">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Dag P&L</div>
+      <div class="kpi-value" id="kpi-daypnl">—</div>
+      <div class="kpi-sub" id="kpi-daypnl-pct">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Posities</div>
+      <div class="kpi-value" id="kpi-positions">—</div>
+      <div class="kpi-sub" id="kpi-cash">cash —</div>
+    </div>
+  </div>
+
+  <!-- Tab content areas -->
+  <div id="tab-portfolio" class="content"></div>
+  <div id="tab-order"     class="content hidden"></div>
+  <div id="tab-watchlist" class="content hidden"></div>
+  <div id="tab-orders"    class="content hidden"></div>
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="switchTab('portfolio')" id="nav-portfolio">
+      <span class="nav-icon">💼</span>Portfolio
+    </button>
+    <button class="nav-btn" onclick="switchTab('order')" id="nav-order">
+      <span class="nav-icon">📝</span>Order
+    </button>
+    <button class="nav-btn" onclick="switchTab('watchlist')" id="nav-watchlist">
+      <span class="nav-icon">👁</span>Watchlist
+    </button>
+    <button class="nav-btn" onclick="switchTab('orders')" id="nav-orders">
+      <span class="nav-icon">📋</span>Historie
+    </button>
+  </nav>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let API_KEY = "", API_SECRET = "";
+let account = null, positions = [], orders = [], quotes = {};
+let currentTab = "portfolio";
+let refreshTimer = null;
+
+const WATCHLIST = ["NVDA","META","MSFT","AAPL","TSM","NFLX","AMD","AMZN"];
+
+// ── Connect ────────────────────────────────────────────────────────────────
+function connect() {
+  API_KEY    = document.getElementById("inp-key").value.trim();
+  API_SECRET = document.getElementById("inp-secret").value.trim();
+  if (!API_KEY || !API_SECRET) { alert("Vul beide keys in"); return; }
+  document.getElementById("setup-screen").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  fetchAll();
+  refreshTimer = setInterval(fetchAll, 30000);
+}
+
+// ── API helpers ────────────────────────────────────────────────────────────
+async function alpaca(path, opts = {}) {
+  const res = await fetch(`/api/alpaca/${path}`, {
+    ...opts,
+    headers: { "key_id": API_KEY, "secret_key": API_SECRET, "Content-Type": "application/json" },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  return res.json();
+}
+
+async function alpacaData(path) {
+  const res = await fetch(`/api/data/${path}`, {
+    headers: { "key_id": API_KEY, "secret_key": API_SECRET },
+  });
+  return res.json();
+}
+
+// ── Fetch all ──────────────────────────────────────────────────────────────
+async function fetchAll() {
+  try {
+    showError(null);
+    const [acc, pos, ord] = await Promise.all([
+      alpaca("account"),
+      alpaca("positions"),
+      alpaca("orders?status=all&limit=30"),
+    ]);
+
+    if (acc.code) throw new Error(acc.message || "API fout");
+
+    account   = acc;
+    positions = pos;
+    orders    = Array.isArray(ord) ? ord : [];
+
+    // Fetch quotes
+    const syms = [...new Set([...WATCHLIST, ...pos.map(p => p.symbol)])].join(",");
+    try {
+      const q = await alpacaData(`stocks/quotes/latest?symbols=${syms}`);
+      quotes = q.quotes || {};
+    } catch(_) {}
+
+    updateKPIs();
+    renderCurrentTab();
+    document.getElementById("update-time").textContent =
+      "Bijgewerkt: " + new Date().toLocaleTimeString("nl-NL", {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  } catch(e) {
+    showError("Fout: " + e.message + " — Controleer je keys");
+  }
+}
+
+// ── KPIs ───────────────────────────────────────────────────────────────────
+function updateKPIs() {
+  if (!account) return;
+  const equity   = parseFloat(account.equity);
+  const lastEq   = parseFloat(account.last_equity);
+  const dayPnL   = equity - lastEq;
+  const dayPct   = (dayPnL / lastEq) * 100;
+  const cash     = parseFloat(account.cash);
+
+  set("kpi-equity",      "$" + equity.toFixed(2));
+  set("kpi-daypnl",      fmtUSD(dayPnL),  dayPnL >= 0 ? "green" : "red");
+  set("kpi-daypnl-pct",  fmtPct(dayPct),  dayPnL >= 0 ? "green" : "red");
+  set("kpi-positions",   positions.length + " open");
+  set("kpi-cash",        "cash $" + cash.toFixed(0));
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  ["portfolio","order","watchlist","orders"].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle("hidden", t !== tab);
+    document.getElementById(`nav-${t}`).classList.toggle("active", t === tab);
+  });
+  renderCurrentTab();
+}
+
+function renderCurrentTab() {
+  if (currentTab === "portfolio") renderPortfolio();
+  if (currentTab === "order")     renderOrder();
+  if (currentTab === "watchlist") renderWatchlist();
+  if (currentTab === "orders")    renderOrders();
+}
+
+// ── Portfolio ──────────────────────────────────────────────────────────────
+function renderPortfolio() {
+  const el = document.getElementById("tab-portfolio");
+  if (positions.length === 0) {
+    el.innerHTML = `
+      <div class="section-title">💼 Open Posities</div>
+      <div class="empty"><div class="empty-icon">📭</div>Geen open posities<br><small>Ga naar Order om een positie te openen</small></div>`;
+    return;
+  }
+
+  const totalPnL = positions.reduce((s,p) => s + parseFloat(p.unrealized_pl||0), 0);
+  el.innerHTML = `
+    <div class="section-title">💼 Open Posities · Totaal P&L: <span class="${totalPnL>=0?'green':'red'}">${fmtUSD(totalPnL)}</span></div>
+    ${positions.map(p => positionCard(p)).join("")}`;
+}
+
+function positionCard(p) {
+  const pl     = parseFloat(p.unrealized_pl);
+  const plPct  = parseFloat(p.unrealized_plpc) * 100;
+  const isLong = p.side === "long";
+  const entry  = parseFloat(p.avg_entry_price);
+  const cur    = parseFloat(p.current_price);
+  const mkt    = parseFloat(p.market_value);
+  const target = isLong ? entry*1.02 : entry*0.98;
+  const stop   = isLong ? entry*0.99 : entry*1.01;
+
+  return `
+  <div class="card" style="border-color:${pl>=0?'rgba(0,229,160,.25)':'rgba(255,77,109,.2)'}">
+    <div class="card-head">
+      <div>
+        <div class="ticker">${p.symbol}</div>
+        <div class="card-name">${p.qty} aandelen</div>
+      </div>
+      <div class="card-badges">
+        <span class="badge ${isLong?'badge-long':'badge-short'}">${isLong?'▲ LONG':'▼ SHORT'}</span>
+        <span class="pnl-main ${pl>=0?'green':'red'}">${fmtUSD(pl)}</span>
+      </div>
+    </div>
+    <div class="price-grid">
+      <div class="price-box"><div class="price-label">Entry</div><div class="price-val" style="color:#94a3b8">$${entry.toFixed(2)}</div></div>
+      <div class="price-box"><div class="price-label">Huidig</div><div class="price-val" style="color:#e2e8f0">$${cur.toFixed(2)}</div></div>
+      <div class="price-box"><div class="price-label">Mkt Wrd</div><div class="price-val" style="color:#a78bfa">$${mkt.toFixed(0)}</div></div>
+      <div class="price-box"><div class="price-label">P&L %</div><div class="price-val ${pl>=0?'green':'red'}">${plPct.toFixed(2)}%</div></div>
+    </div>
+    <div class="suggestion">
+      <span class="green">🎯 Target: $${target.toFixed(2)}</span>
+      <span class="red">🛑 Stop: $${stop.toFixed(2)}</span>
+    </div>
+    <button class="btn-close" onclick="closePosition('${p.symbol}')">Positie Sluiten (Market)</button>
+  </div>`;
+}
+
+async function closePosition(symbol) {
+  if (!confirm(`${symbol} positie sluiten?`)) return;
+  try {
+    await fetch(`/api/alpaca/positions/${symbol}`, {
+      method: "DELETE",
+      headers: { "key_id": API_KEY, "secret_key": API_SECRET },
+    });
+    setTimeout(fetchAll, 1500);
+  } catch(e) { alert("Fout: " + e.message); }
+}
+
+// ── Order form ─────────────────────────────────────────────────────────────
+let orderState = { ticker:"NVDA", side:"buy", type:"market", qty:1, limitPrice:"" };
+
+function renderOrder() {
+  const el = document.getElementById("tab-order");
+  const q  = quotes[orderState.ticker];
+  const mid = q ? ((parseFloat(q.ap)+parseFloat(q.bp))/2) : null;
+  const isLong = orderState.side === "buy";
+  const entry = mid || 100;
+  const target = isLong ? entry*1.02 : entry*0.98;
+  const stop   = isLong ? entry*0.99 : entry*1.01;
+  const reward = Math.abs((target-entry)*orderState.qty);
+  const risk   = Math.abs((stop-entry)*orderState.qty);
+
+  el.innerHTML = `
+  <div class="section-title">📝 Order Plaatsen</div>
+  <div class="card">
+    <div class="form-group">
+      <label class="form-label">Ticker Symbol</label>
+      <input class="form-input" id="of-ticker" value="${orderState.ticker}" oninput="orderState.ticker=this.value.toUpperCase();this.value=orderState.ticker;renderOrder()" autocorrect="off" autocapitalize="characters">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Richting</label>
+      <div class="toggle-row">
+        <button class="toggle-opt ${orderState.side==='buy'?'on-buy':''}" onclick="orderState.side='buy';renderOrder()">▲ LONG</button>
+        <button class="toggle-opt ${orderState.side==='sell'?'on-sell':''}" onclick="orderState.side='sell';renderOrder()">▼ SHORT</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Aantal Aandelen</label>
+      <input class="form-input" type="number" min="1" value="${orderState.qty}" oninput="orderState.qty=parseInt(this.value)||1;renderOrder()" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Order Type</label>
+      <div class="toggle-row">
+        <button class="toggle-opt ${orderState.type==='market'?'on-type':''}" onclick="orderState.type='market';renderOrder()">Market</button>
+        <button class="toggle-opt ${orderState.type==='limit'?'on-type':''}" onclick="orderState.type='limit';renderOrder()">Limit</button>
+      </div>
+    </div>
+    ${orderState.type==='limit'?`
+    <div class="form-group">
+      <label class="form-label">Limietprijs ($)</label>
+      <input class="form-input" type="number" step="0.01" value="${orderState.limitPrice}" oninput="orderState.limitPrice=this.value" placeholder="bijv. 196.50" inputmode="decimal">
+    </div>`:''}
+
+    <button class="place-btn ${orderState.side}" onclick="placeOrder()">
+      ${isLong?'▲ LONG':'▼ SHORT'} ${orderState.ticker} · ${orderState.qty} aandeel${orderState.qty>1?'en':''} · ${orderState.type.toUpperCase()}
+    </button>
+    <div id="order-result"></div>
+  </div>
+
+  <div class="section-title" style="margin-top:16px">📐 Risico Calculator</div>
+  <div class="card">
+    ${mid?`<div class="risk-row"><span class="risk-label">Live koers</span><span class="risk-val">$${mid.toFixed(2)}</span></div>`:'<div class="risk-row"><span class="risk-label">Koers</span><span class="risk-val" style="color:var(--muted)">Geen quote</span></div>'}
+    <div class="risk-row"><span class="risk-label">Target (+2%)</span><span class="risk-val green">$${target.toFixed(2)}</span></div>
+    <div class="risk-row"><span class="risk-label">Stop-loss (-1%)</span><span class="risk-val red">$${stop.toFixed(2)}</span></div>
+    <div class="risk-row"><span class="risk-label">Max winst</span><span class="risk-val green">$${reward.toFixed(2)}</span></div>
+    <div class="risk-row"><span class="risk-label">Max verlies</span><span class="risk-val red">$${risk.toFixed(2)}</span></div>
+    <div class="risk-row"><span class="risk-label">Risk/Reward</span><span class="risk-val purple">2 : 1</span></div>
+    <div class="risk-row"><span class="risk-label">Investering</span><span class="risk-val yellow">$${(entry*orderState.qty).toFixed(2)}</span></div>
+  </div>
+
+  <div class="section-title" style="margin-top:16px">⚡ Snelle Selectie</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px">
+    ${WATCHLIST.map(s=>`<button style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);color:var(--purple);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer" onclick="orderState.ticker='${s}';renderOrder()">${s}</button>`).join("")}
+  </div>`;
+}
+
+async function placeOrder() {
+  const resultEl = document.getElementById("order-result");
+  if (resultEl) resultEl.innerHTML = `<div class="order-result" style="border-color:var(--purple);color:var(--purple)">⏳ Order wordt verwerkt...</div>`;
+
+  try {
+    const body = {
+      symbol: orderState.ticker,
+      qty: String(orderState.qty),
+      side: orderState.side,
+      type: orderState.type,
+      time_in_force: "day",
+      ...(orderState.type === "limit" ? { limit_price: orderState.limitPrice } : {}),
+    };
+    const res = await fetch("/api/alpaca/orders", {
+      method: "POST",
+      headers: { "key_id": API_KEY, "secret_key": API_SECRET, "Content-Type":"application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.id) {
+      if (resultEl) resultEl.innerHTML = `<div class="order-result success">✅ Order geplaatst! ${data.symbol} · ${data.side.toUpperCase()} · ${data.qty} aandelen<br><small>ID: ${data.id.slice(0,16)}...</small></div>`;
+      setTimeout(fetchAll, 2000);
+    } else {
+      throw new Error(data.message || JSON.stringify(data));
+    }
+  } catch(e) {
+    if (resultEl) resultEl.innerHTML = `<div class="order-result error">❌ Fout: ${e.message}</div>`;
+  }
+}
+
+// ── Watchlist ──────────────────────────────────────────────────────────────
+function renderWatchlist() {
+  const el = document.getElementById("tab-watchlist");
+  const hasQuotes = Object.keys(quotes).length > 0;
+
+  el.innerHTML = `
+  <div class="section-title">👁 Watchlist · Live Quotes</div>
+  ${!hasQuotes ? '<div class="empty"><div class="empty-icon">📡</div>Quotes niet beschikbaar<br><small>Markt opent 15:30 NL · Refresh na opening</small></div>' : ''}
+  ${WATCHLIST.map(sym => {
+    const q   = quotes[sym];
+    const ask = q ? parseFloat(q.ap) : null;
+    const bid = q ? parseFloat(q.bp) : null;
+    const mid = ask && bid ? (ask+bid)/2 : null;
+    const spread = ask && bid ? ((ask-bid)/ask*100).toFixed(3) : null;
+    return `
+    <div class="watch-card">
+      <div class="watch-head">
+        <div class="ticker">${sym}</div>
+        <div class="watch-price">${mid ? '$'+mid.toFixed(2) : '—'}</div>
+      </div>
+      ${q ? `
+      <div class="watch-grid">
+        <div class="price-box"><div class="price-label">Bid</div><div class="price-val red">$${bid.toFixed(2)}</div></div>
+        <div class="price-box"><div class="price-label">Ask</div><div class="price-val green">$${ask.toFixed(2)}</div></div>
+        <div class="price-box"><div class="price-label">Spread</div><div class="price-val yellow">${spread}%</div></div>
+      </div>` : '<div style="color:var(--muted);font-size:12px;margin-bottom:10px;text-align:center">Geen quote beschikbaar</div>'}
+      <div class="watch-btns">
+        <button class="watch-btn" style="color:var(--green);border-color:var(--green);background:rgba(0,229,160,.08)" onclick="orderState.ticker='${sym}';orderState.side='buy';switchTab('order')">▲ Long</button>
+        <button class="watch-btn" style="color:var(--red);border-color:var(--red);background:rgba(255,77,109,.08)" onclick="orderState.ticker='${sym}';orderState.side='sell';switchTab('order')">▼ Short</button>
+      </div>
+    </div>`;
+  }).join("")}`;
+}
+
+// ── Orders history ─────────────────────────────────────────────────────────
+function renderOrders() {
+  const el = document.getElementById("tab-orders");
+  if (orders.length === 0) {
+    el.innerHTML = `<div class="section-title">📋 Order Historie</div><div class="empty"><div class="empty-icon">📭</div>Nog geen orders</div>`;
+    return;
+  }
+
+  el.innerHTML = `
+  <div class="section-title">📋 Order Historie (${orders.length})</div>
+  <div class="orders-list">
+    ${orders.map(o => {
+      const isLong = o.side === "buy";
+      const statusClass = o.status==="filled"?"badge-filled":o.status==="canceled"?"badge-canceled":"badge-open";
+      const price = o.filled_avg_price ? "$"+parseFloat(o.filled_avg_price).toFixed(2) : o.limit_price ? "lmt $"+parseFloat(o.limit_price).toFixed(2) : "market";
+      const time  = new Date(o.created_at).toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
+      return `
+      <div class="order-card">
+        <div>
+          <div class="order-symbol">${o.symbol} <span class="badge ${isLong?'badge-long':'badge-short'}" style="font-size:10px;vertical-align:middle">${isLong?'▲':'▼'} ${o.side.toUpperCase()}</span></div>
+          <div class="order-meta">${o.qty} aandelen · ${o.type} · <span class="badge ${statusClass}">${o.status}</span></div>
+        </div>
+        <div>
+          <div class="order-price ${o.status==='filled'?(isLong?'green':'red'):''}">
+            ${price}
+          </div>
+          <div class="order-time">${time}</div>
+        </div>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+function fmtUSD(v) { return (v>=0?"+":"-") + "$" + Math.abs(v).toFixed(2); }
+function fmtPct(v) { return (v>=0?"+":"") + v.toFixed(2) + "%"; }
+
+function set(id, text, colorClass) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  if (colorClass) { el.className = "kpi-value " + colorClass; }
+}
+
+function showError(msg) {
+  const el = document.getElementById("error-bar");
+  if (!el) return;
+  if (msg) { el.textContent = "⚠️ " + msg; el.classList.remove("hidden"); }
+  else { el.classList.add("hidden"); }
+}
+</script>
+</body>
+</html>
